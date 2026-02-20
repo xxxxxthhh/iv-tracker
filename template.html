@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IV Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0}
+a{color:#58a6ff;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Nav */
+nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #21262d;background:#161b22}
+nav h1{font-size:20px;color:#58a6ff}
+nav .links{display:flex;gap:16px;font-size:13px}
+
+/* Layout */
+.container{max-width:1400px;margin:0 auto;padding:24px}
+
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.card{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px}
+.card .lb{color:#8b949e;font-size:11px;text-transform:uppercase;margin-bottom:4px}
+.card .val{font-size:22px;font-weight:700}
+
+/* Colors */
+.g{color:#3fb950}.r{color:#f85149}.b{color:#58a6ff}.y{color:#d29922}.gr{color:#8b949e}
+
+/* Section */
+h2{color:#8b949e;font-size:15px;margin:20px 0 12px;border-bottom:1px solid #21262d;padding-bottom:6px}
+
+/* Table */
+table{width:100%;border-collapse:collapse;background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden;font-size:13px}
+th{background:#21262d;color:#8b949e;font-size:11px;text-transform:uppercase;padding:8px 10px;text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
+th:hover{color:#c9d1d9}
+th .arrow{font-size:10px;margin-left:2px}
+td{padding:8px 10px;border-top:1px solid #21262d}
+tr.clickable:hover{background:#1c2128;cursor:pointer}
+
+/* Tags */
+.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.tag-hot{background:#2d0000;color:#f85149}
+.tag-rich{background:#2d1b00;color:#d29922}
+.tag-fair{background:#0d2818;color:#3fb950}
+.tag-cheap{background:#1c1c1c;color:#8b949e}
+
+/* Score bar */
+.score-bar{width:60px;height:8px;background:#21262d;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px}
+.score-fill{height:100%;border-radius:4px}
+
+/* Detail panel */
+#detail{display:none;margin-top:24px;background:#161b22;border:1px solid #21262d;border-radius:8px;padding:20px}
+#detail .close-btn{float:right;background:none;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px}
+#detail .close-btn:hover{color:#c9d1d9;border-color:#8b949e}
+#detail h3{font-size:18px;color:#58a6ff;margin-bottom:16px}
+.detail-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-box{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;position:relative;height:280px}
+.chart-box canvas{width:100%!important;height:100%!important}
+
+/* Chain table */
+#chain-wrap{max-height:400px;overflow-y:auto;border-radius:8px}
+#chain-wrap table{font-size:12px}
+#chain-wrap th{position:sticky;top:0;z-index:1}
+
+/* Bar chart section */
+.bar-section{margin:24px 0}
+.bar-chart-wrap{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:16px;height:360px;position:relative}
+.bar-chart-wrap canvas{width:100%!important;height:100%!important}
+
+/* Footer */
+.footer{text-align:center;color:#484f58;font-size:11px;padding:24px 0;border-top:1px solid #21262d;margin-top:32px}
+
+/* Responsive */
+@media(max-width:768px){
+  .charts-row{grid-template-columns:1fr}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  nav{flex-direction:column;gap:8px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <h1>🐴 IV Tracker</h1>
+  <div class="links">
+    <a href="../cc-dashboard/index.html">🔒 CC Dashboard →</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="cards" id="summary"></div>
+
+  <h2>📊 IV Scanner — Wheel 候选池</h2>
+  <table id="scanner">
+    <thead><tr>
+      <th data-col="tk">标的</th>
+      <th data-col="px" data-num>股价</th>
+      <th data-col="iv" data-num>ATM IV</th>
+      <th data-col="hv20" data-num>HV20</th>
+      <th data-col="ratio" data-num>IV/HV</th>
+      <th data-col="pct" data-num>IV %ile</th>
+      <th data-col="dte" data-num>DTE</th>
+      <th data-col="sc" data-num>机会评分</th>
+      <th>信号</th>
+    </tr></thead>
+    <tbody id="scanner-body"></tbody>
+  </table>
+
+  <div class="bar-section">
+    <h2>📈 IV 水平对比</h2>
+    <div class="bar-chart-wrap"><canvas id="ivBarChart"></canvas></div>
+  </div>
+
+  <div id="detail">
+    <button class="close-btn" onclick="closeDetail()">✕ 关闭</button>
+    <h3 id="detail-title"></h3>
+    <div class="detail-cards" id="detail-cards"></div>
+    <div class="charts-row">
+      <div class="chart-box"><canvas id="hvChart"></canvas></div>
+      <div class="chart-box"><canvas id="smileChart"></canvas></div>
+    </div>
+    <h2>📋 期权链 (30-45 DTE)</h2>
+    <div id="chain-wrap"><table id="chain">
+      <thead><tr><th>Type</th><th>Strike</th><th>IV</th><th>Delta</th><th>Theta</th><th>Vega</th><th>Bid</th><th>Ask</th><th>Volume</th><th>OI</th></tr></thead>
+      <tbody id="chain-body"></tbody>
+    </table></div>
+  </div>
+
+  <div class="footer">
+    IV Tracker · 数据来源 Futu OpenD · 生成于 <span id="gen-time"></span>
+  </div>
+</div>
+
+<script>
+const D = /*__DATA__*/"placeholder";
+
+// ── Helpers ──
+const fmt = (n,d=2) => n==null?'—':n.toFixed(d);
+const fmtPct = n => n==null?'—':(n*100).toFixed(1)+'%';
+const fmtK = n => n>=1000?(n/1000).toFixed(1)+'K':n.toString();
+const $ = id => document.getElementById(id);
+
+function signalTag(s) {
+  if (s.sc >= 70) return '<span class="tag tag-hot">🔥 强卖</span>';
+  if (s.sc >= 50) return '<span class="tag tag-rich">💰 可卖</span>';
+  if (s.sc >= 30) return '<span class="tag tag-fair">👀 观望</span>';
+  return '<span class="tag tag-cheap">💤 低IV</span>';
+}
+
+function scoreColor(sc) {
+  if (sc >= 70) return '#f85149';
+  if (sc >= 50) return '#d29922';
+  if (sc >= 30) return '#3fb950';
+  return '#484f58';
+}
+
+function ratioClass(r) {
+  if (r == null) return 'gr';
+  if (r > 1.5) return 'r';
+  if (r > 1.2) return 'y';
+  if (r > 1.0) return 'g';
+  return 'gr';
+}
+
+// ── Summary Cards ──
+function renderSummary() {
+  const syms = D.symbols;
+  const avgIV = syms.reduce((a,s) => a+s.iv, 0) / syms.length;
+  const top = syms[0];
+  const best = [...syms].sort((a,b) => b.sc - a.sc)[0];
+  const rich = syms.filter(s => s.ratio && s.ratio > 1.2).length;
+
+  const cards = [
+    {lb:'监控标的', val:syms.length, cls:'b'},
+    {lb:'平均 IV', val:fmtPct(avgIV), cls:'b'},
+    {lb:'最高 IV', val:`${top.tk} ${fmtPct(top.iv)}`, cls:'r'},
+    {lb:'最佳机会', val:`${best.tk} (${best.sc}分)`, cls:'y'},
+    {lb:'IV偏贵 (>1.2x HV)', val:`${rich} 个`, cls: rich>0?'g':'gr'},
+    {lb:'数据日期', val:syms[0]?.dt||'—', cls:'gr'},
+  ];
+  $('summary').innerHTML = cards.map(c =>
+    `<div class="card"><div class="lb">${c.lb}</div><div class="val ${c.cls}">${c.val}</div></div>`
+  ).join('');
+}
+
+// ── Scanner Table ──
+let sortCol = 'sc', sortAsc = false;
+
+function renderScanner() {
+  const syms = [...D.symbols].sort((a,b) => {
+    let va = a[sortCol], vb = b[sortCol];
+    if (va == null) va = -999; if (vb == null) vb = -999;
+    return sortAsc ? va - vb : vb - va;
+  });
+
+  $('scanner-body').innerHTML = syms.map(s => `
+    <tr class="clickable" onclick="showDetail('${s.tk}')">
+      <td><strong>${s.tk}</strong></td>
+      <td>$${fmt(s.px,2)}</td>
+      <td class="${s.iv>0.6?'r':s.iv>0.4?'y':''}"><strong>${fmtPct(s.iv)}</strong></td>
+      <td>${fmtPct(s.hv20)}</td>
+      <td class="${ratioClass(s.ratio)}"><strong>${s.ratio!=null?s.ratio.toFixed(2):'—'}</strong></td>
+      <td>${s.pct!=null?s.pct.toFixed(0)+'%':'—'}</td>
+      <td>${s.dte||'—'}</td>
+      <td><div class="score-bar"><div class="score-fill" style="width:${s.sc}%;background:${scoreColor(s.sc)}"></div></div>${s.sc}</td>
+      <td>${signalTag(s)}</td>
+    </tr>
+  `).join('');
+
+  // Update header arrows
+  document.querySelectorAll('#scanner th').forEach(th => {
+    const col = th.dataset.col;
+    const arrow = col === sortCol ? (sortAsc ? ' ↑' : ' ↓') : '';
+    th.querySelector('.arrow')?.remove();
+    if (arrow) th.insertAdjacentHTML('beforeend', `<span class="arrow">${arrow}</span>`);
+  });
+}
+
+document.querySelectorAll('#scanner th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc;
+    else { sortCol = col; sortAsc = false; }
+    renderScanner();
+  });
+});
+
+// ── IV Bar Chart ──
+let barChart;
+function renderBarChart() {
+  const syms = [...D.symbols].sort((a,b) => a.iv - b.iv);
+  const ctx = $('ivBarChart').getContext('2d');
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: syms.map(s => s.tk),
+      datasets: [
+        {label:'ATM IV', data:syms.map(s=>s.iv*100), backgroundColor:syms.map(s=>s.iv>0.6?'#f8514980':s.iv>0.4?'#d2992280':'#3fb95080'), borderColor:syms.map(s=>s.iv>0.6?'#f85149':s.iv>0.4?'#d29922':'#3fb950'), borderWidth:1},
+        {label:'HV20', data:syms.map(s=>s.hv20?s.hv20*100:0), backgroundColor:'#58a6ff40', borderColor:'#58a6ff', borderWidth:1},
+      ]
+    },
+    options: {
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}},
+      scales:{
+        x:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:v=>v+'%'}},
+        y:{grid:{display:false},ticks:{color:'#c9d1d9',font:{size:12}}}
+      }
+    }
+  });
+}
+
+// ── Detail Panel ──
+let hvChart, smileChart;
+
+function showDetail(tk) {
+  const s = D.symbols.find(x => x.tk === tk);
+  if (!s) return;
+
+  $('detail').style.display = 'block';
+  $('detail-title').textContent = `${tk} — $${fmt(s.px,2)}`;
+
+  // Info cards
+  const items = [
+    {lb:'ATM IV', val:fmtPct(s.iv), cls:s.iv>0.6?'r':s.iv>0.4?'y':'g'},
+    {lb:'Call IV', val:fmtPct(s.civ), cls:'b'},
+    {lb:'Put IV', val:fmtPct(s.piv), cls:'b'},
+    {lb:'HV20', val:fmtPct(s.hv20), cls:'gr'},
+    {lb:'HV50', val:fmtPct(s.hv50), cls:'gr'},
+    {lb:'IV/HV20', val:s.ratio!=null?s.ratio.toFixed(2):'—', cls:ratioClass(s.ratio)},
+    {lb:'IV %ile', val:s.pct!=null?s.pct.toFixed(0)+'%':'—', cls:s.pct>70?'r':s.pct>50?'y':'gr'},
+    {lb:'机会评分', val:s.sc+'/100', cls:s.sc>=70?'r':s.sc>=50?'y':'g'},
+    {lb:'DTE', val:s.dte||'—', cls:'b'},
+    {lb:'到期日', val:s.exp||'—', cls:'gr'},
+  ];
+  $('detail-cards').innerHTML = items.map(c =>
+    `<div class="card"><div class="lb">${c.lb}</div><div class="val ${c.cls}">${c.val}</div></div>`
+  ).join('');
+
+  // HV Chart
+  if (hvChart) hvChart.destroy();
+  if (s.hvc.length > 0) {
+    hvChart = new Chart($('hvChart').getContext('2d'), {
+      type:'line',
+      data:{
+        labels: s.hvc.map(x=>x.d.slice(5)),
+        datasets:[
+          {label:'HV20', data:s.hvc.map(x=>x.h20?x.h20*100:null), borderColor:'#58a6ff', borderWidth:1.5, pointRadius:0, tension:0.3},
+          {label:'HV50', data:s.hvc.map(x=>x.h50?x.h50*100:null), borderColor:'#8b949e', borderWidth:1, pointRadius:0, tension:0.3, borderDash:[4,4]},
+          {label:'Current IV', data:s.hvc.map(()=>s.iv*100), borderColor:'#f85149', borderWidth:1, pointRadius:0, borderDash:[8,4]},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{title:{display:true,text:'HV 走势 vs 当前 IV',color:'#8b949e',font:{size:12}},legend:{labels:{color:'#8b949e',font:{size:10}}}},
+        scales:{x:{grid:{color:'#21262d'},ticks:{color:'#8b949e',font:{size:9},maxTicksLimit:12}},y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:v=>v+'%'}}}
+      }
+    });
+  }
+
+  // IV Smile
+  if (smileChart) smileChart.destroy();
+  const calls = s.ch.filter(c=>c.t==='C'&&c.iv!=null);
+  const puts = s.ch.filter(c=>c.t==='P'&&c.iv!=null);
+  if (calls.length > 0 || puts.length > 0) {
+    const allStrikes = [...new Set(s.ch.filter(c=>c.iv!=null).map(c=>c.s))].sort((a,b)=>a-b);
+    const callMap = Object.fromEntries(calls.map(c=>[c.s, c.iv*100]));
+    const putMap = Object.fromEntries(puts.map(c=>[c.s, c.iv*100]));
+    smileChart = new Chart($('smileChart').getContext('2d'), {
+      type:'line',
+      data:{
+        labels: allStrikes.map(s=>'$'+s),
+        datasets:[
+          {label:'Call IV', data:allStrikes.map(s=>callMap[s]||null), borderColor:'#3fb950', borderWidth:1.5, pointRadius:2, tension:0.3, spanGaps:true},
+          {label:'Put IV', data:allStrikes.map(s=>putMap[s]||null), borderColor:'#f85149', borderWidth:1.5, pointRadius:2, tension:0.3, spanGaps:true},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          title:{display:true,text:'IV Smile (按 Strike)',color:'#8b949e',font:{size:12}},
+          legend:{labels:{color:'#8b949e',font:{size:10}}},
+          annotation: s.px ? {annotations:{stockPrice:{type:'line',xMin:'$'+s.px,xMax:'$'+s.px,borderColor:'#d29922',borderWidth:1,borderDash:[4,4]}}} : undefined
+        },
+        scales:{x:{grid:{color:'#21262d'},ticks:{color:'#8b949e',font:{size:9},maxTicksLimit:15}},y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:v=>v.toFixed(0)+'%'}}}
+      }
+    });
+  }
+
+  // Chain table
+  $('chain-body').innerHTML = s.ch.map(c => {
+    const isATM = Math.abs(c.s - s.px) <= s.px * 0.02;
+    const bg = isATM ? 'background:#1c2128' : '';
+    return `<tr style="${bg}">
+      <td class="${c.t==='C'?'g':'r'}">${c.t==='C'?'Call':'Put'}</td>
+      <td><strong>$${c.s}</strong>${isATM?' ⬅️':''}</td>
+      <td>${c.iv!=null?(c.iv*100).toFixed(1)+'%':'—'}</td>
+      <td>${c.d!=null?c.d.toFixed(3):'—'}</td>
+      <td>${c.th!=null?c.th.toFixed(3):'—'}</td>
+      <td>${c.v!=null?c.v.toFixed(3):'—'}</td>
+      <td>${c.b!=null?'$'+c.b.toFixed(2):'—'}</td>
+      <td>${c.a!=null?'$'+c.a.toFixed(2):'—'}</td>
+      <td>${fmtK(c.vol)}</td>
+      <td>${fmtK(c.oi)}</td>
+    </tr>`;
+  }).join('');
+
+  $('detail').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function closeDetail() {
+  $('detail').style.display = 'none';
+}
+
+// ── Init ──
+$('gen-time').textContent = D.ts;
+renderSummary();
+renderScanner();
+renderBarChart();
+</script>
+</body>
+</html>
