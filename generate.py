@@ -103,12 +103,72 @@ def load_data():
             'hvc': hv_chart, 'ch': ch,
         })
 
+    # ── Near-term chains for Wheel trading ──
+    near_term = []
+    near_rows = conn.execute("""
+        SELECT DISTINCT symbol, expiry_date, dte, stock_price
+        FROM option_chain_snapshot
+        WHERE dte <= 16 AND date = (SELECT MAX(date) FROM option_chain_snapshot)
+        ORDER BY symbol, dte
+    """).fetchall()
+
+    for nr in near_rows:
+        sym = nr['symbol']
+        tk = sym.replace('US.', '')
+        chain = conn.execute("""
+            SELECT option_type,strike_price,implied_volatility,delta,gamma,theta,vega,
+                   bid_price,ask_price,volume,open_interest
+            FROM option_chain_snapshot WHERE symbol=? AND expiry_date=?
+              AND date=(SELECT MAX(date) FROM option_chain_snapshot WHERE symbol=?)
+            ORDER BY strike_price,option_type
+        """, (sym, nr['expiry_date'], sym)).fetchall()
+
+        px = nr['stock_price']
+        ch = []
+        for c in chain:
+            iv_val = sf(c['implied_volatility'])
+            delta = sf(c['delta'], 3)
+            bid = sf(c['bid_price'], 2)
+            ask = sf(c['ask_price'], 2)
+            mid = round((bid + ask) / 2, 2) if bid is not None and ask is not None else None
+            ch.append({
+                't': c['option_type'][:1], 's': c['strike_price'],
+                'iv': iv_val, 'd': delta,
+                'th': sf(c['theta'], 3), 'v': sf(c['vega'], 3),
+                'b': bid, 'a': ask, 'm': mid,
+                'vol': c['volume'] or 0, 'oi': c['open_interest'] or 0,
+            })
+
+        # Compute ATM IV for this expiry
+        atm_iv = None
+        if ch and px:
+            atm_opts = sorted(ch, key=lambda x: abs(x['s'] - px))[:2]
+            ivs = [o['iv'] for o in atm_opts if o['iv']]
+            atm_iv = sf(sum(ivs) / len(ivs)) if ivs else None
+
+        # Best CSP and CC candidates
+        puts = [o for o in ch if o['t'] == 'P' and o['d'] is not None
+                and -0.40 <= o['d'] <= -0.15 and o.get('m') and o['m'] > 0.05]
+        calls = [o for o in ch if o['t'] == 'C' and o['d'] is not None
+                 and 0.15 <= o['d'] <= 0.40 and o.get('m') and o['m'] > 0.05]
+        puts.sort(key=lambda x: abs(x['d'] + 0.30))
+        calls.sort(key=lambda x: abs(x['d'] - 0.30))
+
+        near_term.append({
+            'tk': tk, 'sym': sym, 'px': px,
+            'exp': nr['expiry_date'], 'dte': nr['dte'],
+            'atm_iv': atm_iv,
+            'ch': ch,
+            'csp': puts[:5],   # top 5 CSP candidates
+            'cc': calls[:5],   # top 5 CC candidates
+        })
+
     stats = {}
     for t in ['daily_iv','option_chain_snapshot','historical_volatility']:
         stats[t] = conn.execute(f"SELECT COUNT(*) as c FROM {t}").fetchone()['c']
     conn.close()
 
-    return {'symbols': symbols, 'stats': stats,
+    return {'symbols': symbols, 'near': near_term, 'stats': stats,
             'ts': datetime.now().strftime('%Y-%m-%d %H:%M')}
 
 

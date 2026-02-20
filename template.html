@@ -73,6 +73,32 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
 /* Footer */
 .footer{text-align:center;color:#484f58;font-size:11px;padding:24px 0;border-top:1px solid #21262d;margin-top:32px}
 
+/* Weekly section */
+.weekly-symbol{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:16px;margin-bottom:16px}
+.weekly-symbol h3{color:#58a6ff;font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.weekly-symbol h3 .iv-badge{font-size:12px;padding:2px 8px;border-radius:10px;font-weight:600}
+.weekly-expiry{margin-bottom:16px}
+.weekly-expiry h4{color:#8b949e;font-size:13px;margin-bottom:8px}
+.opp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+.opp-box{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:12px}
+.opp-box h5{color:#8b949e;font-size:11px;text-transform:uppercase;margin-bottom:8px}
+.opp-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #161b22}
+.opp-row:last-child{border-bottom:none}
+.opp-row .strike{font-weight:600;color:#c9d1d9}
+.opp-row .premium{color:#3fb950;font-weight:600}
+.opp-row .ann{color:#d29922;font-size:11px}
+.opp-row .meta{color:#8b949e;font-size:11px}
+.term-struct{display:flex;gap:16px;margin-bottom:12px}
+.term-struct .ts-item{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:8px 14px;text-align:center;flex:1}
+.term-struct .ts-dte{color:#8b949e;font-size:11px}
+.term-struct .ts-iv{font-size:18px;font-weight:700}
+
+/* Tabs */
+.tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #21262d}
+.tab-btn{background:none;border:none;color:#8b949e;font-size:14px;padding:10px 20px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:500}
+.tab-btn:hover{color:#c9d1d9}
+.tab-btn.active{color:#58a6ff;border-bottom-color:#58a6ff}
+
 /* Responsive */
 @media(max-width:768px){
   .charts-row{grid-template-columns:1fr}
@@ -93,6 +119,12 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
 <div class="container">
   <div class="cards" id="summary"></div>
 
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('scanner')">📊 IV Scanner</button>
+    <button class="tab-btn" onclick="switchTab('weekly')">🔄 Weekly Trading</button>
+  </div>
+
+  <div id="scanner-tab">
   <h2>📊 IV Scanner — Wheel 候选池</h2>
   <table id="scanner">
     <thead><tr>
@@ -112,6 +144,13 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
   <div class="bar-section">
     <h2>📈 IV 水平对比</h2>
     <div class="bar-chart-wrap"><canvas id="ivBarChart"></canvas></div>
+  </div>
+
+  </div><!-- /scanner-tab -->
+
+  <div id="weekly" style="display:none">
+    <h2>🔄 Weekly Trading — 近期期权机会 (7-14 DTE)</h2>
+    <div id="weekly-content"></div>
   </div>
 
   <div id="detail">
@@ -354,6 +393,100 @@ function showDetail(tk) {
 
 function closeDetail() {
   $('detail').style.display = 'none';
+}
+
+// ── Tabs ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  $('scanner-tab').style.display = tab === 'scanner' ? '' : 'none';
+  $('weekly').style.display = tab === 'weekly' ? '' : 'none';
+  if (tab === 'weekly' && !weeklyRendered) renderWeekly();
+}
+
+// ── Weekly Trading ──
+let weeklyRendered = false;
+
+function renderWeekly() {
+  weeklyRendered = true;
+  const near = D.near || [];
+  if (!near.length) {
+    $('weekly-content').innerHTML = '<p class="gr" style="padding:20px">暂无近期期权数据。运行采集后刷新。</p>';
+    return;
+  }
+
+  // Group by ticker
+  const byTicker = {};
+  near.forEach(n => {
+    if (!byTicker[n.tk]) byTicker[n.tk] = [];
+    byTicker[n.tk].push(n);
+  });
+
+  let html = '';
+  for (const [tk, expiries] of Object.entries(byTicker)) {
+    const px = expiries[0].px;
+    html += `<div class="weekly-symbol">`;
+    html += `<h3>${tk} <span class="gr">$${fmt(px,2)}</span></h3>`;
+
+    // Term structure
+    html += `<div class="term-struct">`;
+    expiries.sort((a,b) => a.dte - b.dte);
+    expiries.forEach(e => {
+      const ivColor = e.atm_iv > 0.7 ? 'r' : e.atm_iv > 0.5 ? 'y' : 'g';
+      html += `<div class="ts-item"><div class="ts-dte">${e.exp} (${e.dte}D)</div><div class="ts-iv ${ivColor}">${e.atm_iv ? (e.atm_iv*100).toFixed(1)+'%' : '—'}</div></div>`;
+    });
+    html += `</div>`;
+
+    expiries.forEach(e => {
+      html += `<div class="weekly-expiry">`;
+      html += `<h4>📅 ${e.exp} — DTE ${e.dte}</h4>`;
+      html += `<div class="opp-grid">`;
+
+      // CSP candidates
+      html += `<div class="opp-box"><h5>🔻 Sell Put (CSP)</h5>`;
+      if (e.csp && e.csp.length) {
+        e.csp.forEach(p => {
+          const mid = p.m || ((p.b||0)+(p.a||0))/2;
+          const ann = e.dte > 0 ? (mid / p.s * 365 / e.dte * 100).toFixed(0) : '—';
+          const wk = (mid * 100 / e.dte * 7).toFixed(0);
+          html += `<div class="opp-row">
+            <span class="strike">$${p.s}</span>
+            <span class="meta">δ${p.d?.toFixed(2)||'—'}</span>
+            <span class="premium">$${mid.toFixed(2)}</span>
+            <span class="ann">${ann}% ann</span>
+            <span class="meta">$${wk}/wk</span>
+          </div>`;
+        });
+      } else {
+        html += '<div class="gr" style="font-size:12px;padding:8px 0">无合适候选</div>';
+      }
+      html += `</div>`;
+
+      // CC candidates
+      html += `<div class="opp-box"><h5>🔺 Sell Call (CC)</h5>`;
+      if (e.cc && e.cc.length) {
+        e.cc.forEach(c => {
+          const mid = c.m || ((c.b||0)+(c.a||0))/2;
+          const ann = e.dte > 0 && px ? (mid / px * 365 / e.dte * 100).toFixed(0) : '—';
+          const wk = (mid * 100 / e.dte * 7).toFixed(0);
+          html += `<div class="opp-row">
+            <span class="strike">$${c.s}</span>
+            <span class="meta">δ${c.d?.toFixed(2)||'—'}</span>
+            <span class="premium">$${mid.toFixed(2)}</span>
+            <span class="ann">${ann}% ann</span>
+            <span class="meta">$${wk}/wk</span>
+          </div>`;
+        });
+      } else {
+        html += '<div class="gr" style="font-size:12px;padding:8px 0">无合适候选</div>';
+      }
+      html += `</div></div></div>`;
+    });
+
+    html += `</div>`;
+  }
+
+  $('weekly-content').innerHTML = html;
 }
 
 // ── Init ──
