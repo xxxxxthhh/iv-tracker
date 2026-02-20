@@ -341,12 +341,18 @@ function showDetail(tk) {
     });
   }
 
-  // IV Smile
+  // IV Smile — also check near-term chain if main chain is empty
   if (smileChart) smileChart.destroy();
-  const calls = s.ch.filter(c=>c.t==='C'&&c.iv!=null);
-  const puts = s.ch.filter(c=>c.t==='P'&&c.iv!=null);
+  let smileData = s.ch;
+  if (smileData.length === 0 && D.near) {
+    const nearMatch = D.near.find(n => n.tk === tk);
+    if (nearMatch) smileData = nearMatch.ch;
+  }
+  const calls = smileData.filter(c=>c.t==='C'&&c.iv!=null);
+  const puts = smileData.filter(c=>c.t==='P'&&c.iv!=null);
   if (calls.length > 0 || puts.length > 0) {
-    const allStrikes = [...new Set(s.ch.filter(c=>c.iv!=null).map(c=>c.s))].sort((a,b)=>a-b);
+    $('smileChart').parentElement.style.display = '';
+    const allStrikes = [...new Set(smileData.filter(c=>c.iv!=null).map(c=>c.s))].sort((a,b)=>a-b);
     const callMap = Object.fromEntries(calls.map(c=>[c.s, c.iv*100]));
     const putMap = Object.fromEntries(puts.map(c=>[c.s, c.iv*100]));
     smileChart = new Chart($('smileChart').getContext('2d'), {
@@ -368,10 +374,17 @@ function showDetail(tk) {
         scales:{x:{grid:{color:'#21262d'},ticks:{color:'#8b949e',font:{size:9},maxTicksLimit:15}},y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:v=>v.toFixed(0)+'%'}}}
       }
     });
+  } else {
+    $('smileChart').parentElement.style.display = 'none';
   }
 
-  // Chain table
-  $('chain-body').innerHTML = s.ch.map(c => {
+  // Chain table — use near-term chain as fallback
+  let chainData = s.ch;
+  if (chainData.length === 0 && D.near) {
+    const nearMatch = D.near.find(n => n.tk === tk);
+    if (nearMatch) chainData = nearMatch.ch;
+  }
+  $('chain-body').innerHTML = chainData.map(c => {
     const isATM = Math.abs(c.s - s.px) <= s.px * 0.02;
     const bg = isATM ? 'background:#1c2128' : '';
     return `<tr style="${bg}">
