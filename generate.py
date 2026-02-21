@@ -106,9 +106,10 @@ def load_data():
     # ── Near-term chains for Wheel trading ──
     near_term = []
     near_rows = conn.execute("""
-        SELECT DISTINCT symbol, expiry_date, dte, stock_price
+        SELECT symbol, expiry_date, dte, MAX(stock_price) as stock_price
         FROM option_chain_snapshot
         WHERE dte <= 16 AND date = (SELECT MAX(date) FROM option_chain_snapshot)
+        GROUP BY symbol, expiry_date
         ORDER BY symbol, dte
     """).fetchall()
 
