@@ -173,8 +173,22 @@ def load_data():
             'ts': datetime.now().strftime('%Y-%m-%d %H:%M')}
 
 
+def load_screener():
+    """Load screener results if available"""
+    screener_path = SCRIPT_DIR / '..' / 'iv-scanner' / 'data' / 'screener_results.json'
+    if screener_path.exists():
+        with open(screener_path) as f:
+            return json.load(f)
+    return None
+
+
 def main():
     data = load_data()
+    screener = load_screener()
+    if screener:
+        data['screener'] = screener
+        print(f"📡 Loaded screener data: {len(screener.get('results',[]))} tickers from {screener.get('ts','?')}")
+
     jdata = json.dumps(data, ensure_ascii=False, separators=(',',':'))
 
     with open(SCRIPT_DIR / 'template.html', 'r') as f:

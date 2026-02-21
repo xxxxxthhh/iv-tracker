@@ -105,6 +105,10 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
   .cards{grid-template-columns:repeat(2,1fr)}
   nav{flex-direction:column;gap:8px}
 }
+
+/* Screener tracked badge */
+.badge-tracked{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;background:#0d2818;color:#3fb950;margin-left:4px}
+.badge-new{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;background:#2d1b00;color:#d29922;margin-left:4px}
 </style>
 </head>
 <body>
@@ -122,6 +126,7 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('scanner')">📊 IV Scanner</button>
     <button class="tab-btn" onclick="switchTab('weekly')">🔄 Weekly Trading</button>
+    <button class="tab-btn" onclick="switchTab('screener')">🔍 Screener</button>
   </div>
 
   <div id="scanner-tab">
@@ -151,6 +156,50 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
   <div id="weekly" style="display:none">
     <h2>🔄 Weekly Trading — 近期期权机会 (7-14 DTE)</h2>
     <div id="weekly-content"></div>
+  </div>
+
+  <div id="screener-tab" style="display:none">
+    <h2>🔍 全市场 IV Screener — yfinance 数据</h2>
+    <div id="screener-meta" class="gr" style="font-size:12px;margin-bottom:12px"></div>
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+      <label class="gr" style="font-size:12px">最低 IV:</label>
+      <select id="scr-min-iv" onchange="renderScreener()" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px">
+        <option value="0.30">30%</option>
+        <option value="0.40" selected>40%</option>
+        <option value="0.50">50%</option>
+        <option value="0.60">60%</option>
+        <option value="0.70">70%</option>
+      </select>
+      <label class="gr" style="font-size:12px;margin-left:8px">最高股价:</label>
+      <select id="scr-max-price" onchange="renderScreener()" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px">
+        <option value="50">$50</option>
+        <option value="100">$100</option>
+        <option value="200">$200</option>
+        <option value="500" selected>$500</option>
+        <option value="99999">不限</option>
+      </select>
+      <label class="gr" style="font-size:12px;margin-left:8px">最低 OI:</label>
+      <select id="scr-min-oi" onchange="renderScreener()" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px">
+        <option value="0">不限</option>
+        <option value="100" selected>100</option>
+        <option value="1000">1K</option>
+        <option value="10000">10K</option>
+        <option value="50000">50K</option>
+      </select>
+    </div>
+    <table id="screener-table">
+      <thead><tr>
+        <th data-scol="ticker">标的</th>
+        <th data-scol="price" data-num>股价</th>
+        <th data-scol="atm_iv" data-num>ATM IV</th>
+        <th data-scol="open_interest" data-num>OI</th>
+        <th data-scol="csp_ann_pct" data-num>CSP 年化</th>
+        <th data-scol="dte" data-num>DTE</th>
+        <th>信号</th>
+        <th>状态</th>
+      </tr></thead>
+      <tbody id="screener-body"></tbody>
+    </table>
   </div>
 
   <div id="detail">
@@ -414,7 +463,9 @@ function switchTab(tab) {
   event.target.classList.add('active');
   $('scanner-tab').style.display = tab === 'scanner' ? '' : 'none';
   $('weekly').style.display = tab === 'weekly' ? '' : 'none';
+  $('screener-tab').style.display = tab === 'screener' ? '' : 'none';
   if (tab === 'weekly' && !weeklyRendered) renderWeekly();
+  if (tab === 'screener' && !screenerRendered) renderScreener();
 }
 
 // ── Weekly Trading ──
@@ -513,6 +564,76 @@ function renderWeekly() {
 
   $('weekly-content').innerHTML = html;
 }
+
+// ── Screener ──
+let screenerRendered = false;
+let scrSortCol = 'atm_iv', scrSortAsc = false;
+
+function renderScreener() {
+  screenerRendered = true;
+  const scr = D.screener;
+  if (!scr || !scr.results || !scr.results.length) {
+    $('screener-body').innerHTML = '<tr><td colspan="8" class="gr" style="padding:20px;text-align:center">暂无 Screener 数据。运行 screener.py 后重新生成。</td></tr>';
+    return;
+  }
+
+  $('screener-meta').textContent = `数据来源: yfinance · 扫描 ${scr.total_scanned} 个标的，${scr.total_with_data} 个有数据 · 更新于 ${scr.ts}`;
+
+  const minIV = parseFloat($('scr-min-iv').value);
+  const maxPrice = parseFloat($('scr-max-price').value);
+  const minOI = parseInt($('scr-min-oi').value);
+
+  // Tracked tickers from IV Scanner
+  const tracked = new Set(D.symbols.map(s => s.tk));
+
+  let items = scr.results.filter(r =>
+    r.atm_iv >= minIV && r.price <= maxPrice && r.open_interest >= minOI
+  );
+
+  items.sort((a, b) => {
+    let va = a[scrSortCol], vb = b[scrSortCol];
+    if (va == null) va = -999; if (vb == null) vb = -999;
+    if (typeof va === 'string') return scrSortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+    return scrSortAsc ? va - vb : vb - va;
+  });
+
+  $('screener-body').innerHTML = items.map(r => {
+    const isTracked = tracked.has(r.ticker);
+    const signal = r.atm_iv >= 0.70 ? '<span class="tag tag-hot">🔥 强卖</span>'
+      : r.atm_iv >= 0.50 ? '<span class="tag tag-rich">💰 可卖</span>'
+      : '<span class="tag tag-fair">👀 观望</span>';
+    const status = isTracked
+      ? '<span class="badge-tracked">📊 精确追踪</span>'
+      : '<span class="badge-new">🆕 仅 Screener</span>';
+    return `<tr>
+      <td><strong>${r.ticker}</strong></td>
+      <td>$${r.price.toFixed(2)}</td>
+      <td class="${r.atm_iv>0.7?'r':r.atm_iv>0.5?'y':''}"><strong>${r.atm_iv_pct}%</strong></td>
+      <td>${r.open_interest>=1000?(r.open_interest/1000).toFixed(1)+'K':r.open_interest}</td>
+      <td class="${r.csp_ann_pct>80?'g':r.csp_ann_pct>40?'y':''}">${r.csp_ann_pct}%</td>
+      <td>${r.dte}</td>
+      <td>${signal}</td>
+      <td>${status}</td>
+    </tr>`;
+  }).join('');
+
+  // Sort headers
+  document.querySelectorAll('#screener-table th[data-scol]').forEach(th => {
+    th.querySelector('.arrow')?.remove();
+    if (th.dataset.scol === scrSortCol) {
+      th.insertAdjacentHTML('beforeend', `<span class="arrow">${scrSortAsc?' ↑':' ↓'}</span>`);
+    }
+  });
+}
+
+document.querySelectorAll('#screener-table th[data-scol]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.scol;
+    if (scrSortCol === col) scrSortAsc = !scrSortAsc;
+    else { scrSortCol = col; scrSortAsc = false; }
+    renderScreener();
+  });
+});
 
 // ── Init ──
 $('gen-time').textContent = D.ts;
