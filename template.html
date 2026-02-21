@@ -455,18 +455,24 @@ function renderWeekly() {
       html += `<h4>📅 ${e.exp} — DTE ${e.dte}</h4>`;
       html += `<div class="opp-grid">`;
 
-      // CSP candidates
+      // CSP candidates — highlight best annualized return
       html += `<div class="opp-box"><h5>🔻 Sell Put (CSP)</h5>`;
       if (e.csp && e.csp.length) {
-        e.csp.forEach(p => {
+        const cspAnns = e.csp.map(p => {
+          const mid = p.m || ((p.b||0)+(p.a||0))/2;
+          return e.dte > 0 ? mid / p.s * 365 / e.dte * 100 : 0;
+        });
+        const maxCspAnn = Math.max(...cspAnns);
+        e.csp.forEach((p, i) => {
           const mid = p.m || ((p.b||0)+(p.a||0))/2;
           const ann = e.dte > 0 ? (mid / p.s * 365 / e.dte * 100).toFixed(0) : '—';
           const wk = (mid * 100 / e.dte * 7).toFixed(0);
+          const best = cspAnns[i] === maxCspAnn ? ' style="color:#3fb950;font-weight:700"' : '';
           html += `<div class="opp-row">
             <span class="strike">$${p.s}</span>
             <span class="meta">δ${p.d?.toFixed(2)||'—'}</span>
             <span class="premium">$${mid.toFixed(2)}</span>
-            <span class="ann">${ann}% ann</span>
+            <span class="ann"${best}>${ann}% ann</span>
             <span class="meta">$${wk}/wk</span>
           </div>`;
         });
@@ -475,18 +481,24 @@ function renderWeekly() {
       }
       html += `</div>`;
 
-      // CC candidates
+      // CC candidates — highlight best annualized return
       html += `<div class="opp-box"><h5>🔺 Sell Call (CC)</h5>`;
       if (e.cc && e.cc.length) {
-        e.cc.forEach(c => {
+        const ccAnns = e.cc.map(c => {
+          const mid = c.m || ((c.b||0)+(c.a||0))/2;
+          return e.dte > 0 && px ? mid / px * 365 / e.dte * 100 : 0;
+        });
+        const maxCcAnn = Math.max(...ccAnns);
+        e.cc.forEach((c, i) => {
           const mid = c.m || ((c.b||0)+(c.a||0))/2;
           const ann = e.dte > 0 && px ? (mid / px * 365 / e.dte * 100).toFixed(0) : '—';
           const wk = (mid * 100 / e.dte * 7).toFixed(0);
+          const best = ccAnns[i] === maxCcAnn ? ' style="color:#3fb950;font-weight:700"' : '';
           html += `<div class="opp-row">
             <span class="strike">$${c.s}</span>
             <span class="meta">δ${c.d?.toFixed(2)||'—'}</span>
             <span class="premium">$${mid.toFixed(2)}</span>
-            <span class="ann">${ann}% ann</span>
+            <span class="ann"${best}>${ann}% ann</span>
             <span class="meta">$${wk}/wk</span>
           </div>`;
         });
