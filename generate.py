@@ -106,9 +106,11 @@ def load_data():
     # ── Near-term chains for Wheel trading ──
     near_term = []
     near_rows = conn.execute("""
-        SELECT symbol, expiry_date, dte, MAX(stock_price) as stock_price
+        SELECT symbol, expiry_date, dte, MAX(stock_price) as stock_price,
+               date as collect_date
         FROM option_chain_snapshot
-        WHERE dte <= 16 AND date = (SELECT MAX(date) FROM option_chain_snapshot)
+        WHERE dte <= 16
+          AND date = (SELECT MAX(date) FROM option_chain_snapshot WHERE dte <= 16)
         GROUP BY symbol, expiry_date
         ORDER BY symbol, dte
     """).fetchall()
@@ -120,9 +122,9 @@ def load_data():
             SELECT option_type,strike_price,implied_volatility,delta,gamma,theta,vega,
                    bid_price,ask_price,volume,open_interest
             FROM option_chain_snapshot WHERE symbol=? AND expiry_date=?
-              AND date=(SELECT MAX(date) FROM option_chain_snapshot WHERE symbol=?)
+              AND date=?
             ORDER BY strike_price,option_type
-        """, (sym, nr['expiry_date'], sym)).fetchall()
+        """, (sym, nr['expiry_date'], nr['collect_date'])).fetchall()
 
         px = nr['stock_price']
         ch = []
@@ -163,6 +165,24 @@ def load_data():
             'csp': puts[:5],   # top 5 CSP candidates
             'cc': calls[:5],   # top 5 CC candidates
         })
+
+    # ── Merge near-term data into scanner (prefer shortest DTE per symbol) ──
+    near_by_tk = {}
+    for nt in near_term:
+        tk = nt['tk']
+        if tk not in near_by_tk or nt['dte'] < near_by_tk[tk]['dte']:
+            near_by_tk[tk] = nt
+
+    for sym in symbols:
+        nt = near_by_tk.get(sym['tk'])
+        if nt and nt.get('atm_iv') is not None:
+            sym['iv'] = nt['atm_iv']
+            sym['dte'] = nt['dte']
+            sym['exp'] = nt['exp']
+            # Recalculate ratio and score with near-term IV
+            hv20 = sym.get('hv20')
+            sym['ratio'] = round(nt['atm_iv'] / hv20, 2) if hv20 and hv20 > 0 else sym['ratio']
+            sym['sc'] = score(nt['atm_iv'], sym['ratio'], sym['pct'])
 
     stats = {}
     for t in ['daily_iv','option_chain_snapshot','historical_volatility']:
