@@ -124,12 +124,12 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
   <div class="cards" id="summary"></div>
 
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('scanner')">📊 IV Scanner</button>
-    <button class="tab-btn" onclick="switchTab('weekly')">🔄 Weekly Trading</button>
+    <button class="tab-btn" onclick="switchTab('scanner')">📊 IV Scanner</button>
+    <button class="tab-btn active" onclick="switchTab('weekly')">🔄 Within DTE</button>
     <button class="tab-btn" onclick="switchTab('screener')">🔍 Screener</button>
   </div>
 
-  <div id="scanner-tab">
+  <div id="scanner-tab" style="display:none">
   <h2>📊 IV Scanner — Wheel 候选池</h2>
   <table id="scanner">
     <thead><tr>
@@ -153,8 +153,8 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
 
   </div><!-- /scanner-tab -->
 
-  <div id="weekly" style="display:none">
-    <h2>🔄 Weekly Trading — 近期期权机会 (7-14 DTE)</h2>
+  <div id="weekly">
+    <h2>🔄 Within DTE — 近期期权机会 (7-14 DTE)</h2>
     <div id="weekly-content"></div>
   </div>
 
@@ -640,6 +640,7 @@ $('gen-time').textContent = D.ts;
 renderSummary();
 renderScanner();
 renderBarChart();
+renderWeekly();
 </script>
 </body>
 </html>
