@@ -4,111 +4,472 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>IV Tracker</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link href="https://cdn.jsdelivr.net/fontsource/fonts/geist-sans@latest/latin-400-normal.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/fontsource/fonts/geist-sans@latest/latin-500-normal.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/fontsource/fonts/geist-sans@latest/latin-600-normal.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/fontsource/fonts/geist-sans@latest/latin-700-normal.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/fontsource/fonts/geist-mono@latest/latin-400-normal.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/fontsource/fonts/geist-mono@latest/latin-600-normal.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:0}
-a{color:#58a6ff;text-decoration:none}
-a:hover{text-decoration:underline}
+:root {
+  --zinc-950: #09090b;
+  --zinc-900: #18181b;
+  --zinc-800: #27272a;
+  --zinc-700: #3f3f46;
+  --zinc-600: #52525b;
+  --zinc-500: #71717a;
+  --zinc-400: #a1a1aa;
+  --zinc-300: #d4d4d8;
+  --zinc-200: #e4e4e7;
+  --font-sans: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px rgba(63,63,70,0.15);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px rgba(63,63,70,0.25);
+  --transition: 150ms ease;
+  --accent: #3b82f6;
+  --accent-dim: rgba(59,130,246,0.12);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+}
+
+* { margin:0; padding:0; box-sizing:border-box }
+
+body {
+  background: var(--zinc-950);
+  color: var(--zinc-300);
+  font-family: var(--font-sans);
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: var(--accent); text-decoration: none; transition: color var(--transition) }
+a:hover { color: #60a5fa; text-decoration: none }
 
 /* Nav */
-nav{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #21262d;background:#161b22}
-nav h1{font-size:20px;color:#58a6ff}
-nav .links{display:flex;gap:16px;font-size:13px}
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  border-bottom: 1px solid rgba(63,63,70,0.3);
+  background: rgba(9,9,11,0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+nav h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--zinc-200);
+  letter-spacing: -0.02em;
+}
+nav .links {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+}
+nav .links a {
+  color: var(--zinc-400);
+  transition: color var(--transition);
+  font-weight: 500;
+}
+nav .links a:hover { color: var(--zinc-200) }
 
 /* Layout */
-.container{max-width:1400px;margin:0 auto;padding:24px}
+.container { max-width: 1400px; margin: 0 auto; padding: 28px }
 
 /* Cards */
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
-.card{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:14px}
-.card .lb{color:#8b949e;font-size:11px;text-transform:uppercase;margin-bottom:4px}
-.card .val{font-size:22px;font-weight:700}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+.card {
+  background: var(--zinc-900);
+  border: 1px solid rgba(63,63,70,0.2);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+.card:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(63,63,70,0.35);
+}
+.card .lb {
+  color: var(--zinc-500);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.card .val {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
 
 /* Colors */
-.g{color:#3fb950}.r{color:#f85149}.b{color:#58a6ff}.y{color:#d29922}.gr{color:#8b949e}
+.g { color: var(--green) }
+.r { color: var(--red) }
+.b { color: var(--accent) }
+.y { color: var(--amber) }
+.gr { color: var(--zinc-500) }
 
 /* Section */
-h2{color:#8b949e;font-size:15px;margin:20px 0 12px;border-bottom:1px solid #21262d;padding-bottom:6px}
+h2 {
+  color: var(--zinc-500);
+  font-size: 14px;
+  font-weight: 500;
+  margin: 24px 0 14px;
+  border-bottom: 1px solid rgba(63,63,70,0.2);
+  padding-bottom: 8px;
+  letter-spacing: 0.01em;
+}
 
 /* Table */
-table{width:100%;border-collapse:collapse;background:#161b22;border:1px solid #21262d;border-radius:8px;overflow:hidden;font-size:13px}
-th{background:#21262d;color:#8b949e;font-size:11px;text-transform:uppercase;padding:8px 10px;text-align:left;cursor:pointer;user-select:none;white-space:nowrap}
-th:hover{color:#c9d1d9}
-th .arrow{font-size:10px;margin-left:2px}
-td{padding:8px 10px;border-top:1px solid #21262d}
-tr.clickable:hover{background:#1c2128;cursor:pointer}
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--zinc-900);
+  border: 1px solid rgba(63,63,70,0.2);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 13px;
+  box-shadow: var(--shadow-card);
+}
+th {
+  background: rgba(39,39,42,0.5);
+  color: var(--zinc-500);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+th:hover { color: var(--zinc-300) }
+th .arrow { font-size: 10px; margin-left: 3px; color: var(--accent) }
+td {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(63,63,70,0.12);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+td strong { font-weight: 600 }
+tr.clickable {
+  transition: background var(--transition);
+  cursor: pointer;
+}
+tr.clickable:hover { background: rgba(63,63,70,0.12) }
 
 /* Tags */
-.tag{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
-.tag-hot{background:#2d0000;color:#f85149}
-.tag-rich{background:#2d1b00;color:#d29922}
-.tag-fair{background:#0d2818;color:#3fb950}
-.tag-cheap{background:#1c1c1c;color:#8b949e}
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+  transition: opacity var(--transition);
+}
+.tag-hot { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.15) }
+.tag-rich { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(245,158,11,0.15) }
+.tag-fair { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.15) }
+.tag-cheap { background: rgba(113,113,122,0.08); color: var(--zinc-500); border: 1px solid rgba(113,113,122,0.12) }
 
 /* Score bar */
-.score-bar{width:60px;height:8px;background:#21262d;border-radius:4px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:6px}
-.score-fill{height:100%;border-radius:4px}
+.score-bar {
+  width: 64px;
+  height: 6px;
+  background: rgba(63,63,70,0.25);
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.score-fill { height: 100%; border-radius: 3px; transition: width 300ms ease }
 
 /* Detail panel */
-#detail{display:none;margin-top:24px;background:#161b22;border:1px solid #21262d;border-radius:8px;padding:20px}
-#detail .close-btn{float:right;background:none;border:1px solid #30363d;color:#8b949e;border-radius:6px;padding:4px 12px;cursor:pointer;font-size:12px}
-#detail .close-btn:hover{color:#c9d1d9;border-color:#8b949e}
-#detail h3{font-size:18px;color:#58a6ff;margin-bottom:16px}
-.detail-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
-.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
-.chart-box{background:#0d1117;border:1px solid #21262d;border-radius:8px;padding:12px;position:relative;height:280px}
-.chart-box canvas{width:100%!important;height:100%!important}
+#detail {
+  display: none;
+  margin-top: 28px;
+  background: var(--zinc-900);
+  border: 1px solid rgba(63,63,70,0.2);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+}
+#detail .close-btn {
+  float: right;
+  background: rgba(63,63,70,0.15);
+  border: 1px solid rgba(63,63,70,0.25);
+  color: var(--zinc-400);
+  border-radius: var(--radius-xs);
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  transition: all var(--transition);
+}
+#detail .close-btn:hover {
+  color: var(--zinc-200);
+  background: rgba(63,63,70,0.25);
+  border-color: rgba(63,63,70,0.4);
+}
+#detail h3 {
+  font-size: 18px;
+  color: var(--zinc-200);
+  margin-bottom: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.detail-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.chart-box {
+  background: var(--zinc-950);
+  border: 1px solid rgba(63,63,70,0.15);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  position: relative;
+  height: 280px;
+}
+.chart-box canvas { width: 100%!important; height: 100%!important }
 
 /* Chain table */
-#chain-wrap{max-height:400px;overflow-y:auto;border-radius:8px}
-#chain-wrap table{font-size:12px}
-#chain-wrap th{position:sticky;top:0;z-index:1}
+#chain-wrap {
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: var(--radius-sm);
+}
+#chain-wrap table { font-size: 12px }
+#chain-wrap th { position: sticky; top: 0; z-index: 1 }
+#chain-wrap::-webkit-scrollbar { width: 6px }
+#chain-wrap::-webkit-scrollbar-track { background: transparent }
+#chain-wrap::-webkit-scrollbar-thumb { background: var(--zinc-700); border-radius: 3px }
 
 /* Bar chart section */
-.bar-section{margin:24px 0}
-.bar-chart-wrap{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:16px;height:360px;position:relative}
-.bar-chart-wrap canvas{width:100%!important;height:100%!important}
+.bar-section { margin: 28px 0 }
+.bar-chart-wrap {
+  background: var(--zinc-900);
+  border: 1px solid rgba(63,63,70,0.2);
+  border-radius: var(--radius);
+  padding: 18px;
+  height: 360px;
+  position: relative;
+  box-shadow: var(--shadow-card);
+}
+.bar-chart-wrap canvas { width: 100%!important; height: 100%!important }
 
 /* Footer */
-.footer{text-align:center;color:#484f58;font-size:11px;padding:24px 0;border-top:1px solid #21262d;margin-top:32px}
+.footer {
+  text-align: center;
+  color: var(--zinc-600);
+  font-size: 11px;
+  padding: 28px 0;
+  border-top: 1px solid rgba(63,63,70,0.15);
+  margin-top: 40px;
+  letter-spacing: 0.01em;
+}
 
 /* Weekly section */
-.weekly-symbol{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:16px;margin-bottom:16px}
-.weekly-symbol h3{color:#58a6ff;font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.weekly-symbol h3 .iv-badge{font-size:12px;padding:2px 8px;border-radius:10px;font-weight:600}
-.weekly-expiry{margin-bottom:16px}
-.weekly-expiry h4{color:#8b949e;font-size:13px;margin-bottom:8px}
-.opp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
-.opp-box{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:12px}
-.opp-box h5{color:#8b949e;font-size:11px;text-transform:uppercase;margin-bottom:8px}
-.opp-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid #161b22}
-.opp-row:last-child{border-bottom:none}
-.opp-row .strike{font-weight:600;color:#c9d1d9}
-.opp-row .premium{color:#3fb950;font-weight:600}
-.opp-row .ann{color:#d29922;font-size:11px}
-.opp-row .meta{color:#8b949e;font-size:11px}
-.term-struct{display:flex;gap:16px;margin-bottom:12px}
-.term-struct .ts-item{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:8px 14px;text-align:center;flex:1}
-.term-struct .ts-dte{color:#8b949e;font-size:11px}
-.term-struct .ts-iv{font-size:18px;font-weight:700}
+.weekly-symbol {
+  background: var(--zinc-900);
+  border: 1px solid rgba(63,63,70,0.2);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-card);
+}
+.weekly-symbol h3 {
+  color: var(--zinc-200);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: -0.01em;
+}
+.weekly-symbol h3 .iv-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.weekly-expiry { margin-bottom: 18px }
+.weekly-expiry h4 {
+  color: var(--zinc-400);
+  font-size: 13px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.opp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.opp-box {
+  background: var(--zinc-950);
+  border: 1px solid rgba(63,63,70,0.15);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+.opp-box h5 {
+  color: var(--zinc-500);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+.opp-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(63,63,70,0.08);
+  font-family: var(--font-mono);
+  transition: background var(--transition);
+}
+.opp-row:last-child { border-bottom: none }
+.opp-row:hover { background: rgba(63,63,70,0.06); border-radius: 4px }
+.opp-row .strike { font-weight: 600; color: var(--zinc-200) }
+.opp-row .premium { color: var(--green); font-weight: 600 }
+.opp-row .ann { color: var(--amber); font-size: 11px }
+.opp-row .meta { color: var(--zinc-500); font-size: 11px }
+.term-struct {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.term-struct .ts-item {
+  background: var(--zinc-950);
+  border: 1px solid rgba(63,63,70,0.15);
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  text-align: center;
+  flex: 1;
+  transition: border-color var(--transition);
+}
+.term-struct .ts-item:hover { border-color: rgba(63,63,70,0.3) }
+.term-struct .ts-dte { color: var(--zinc-500); font-size: 11px; font-weight: 500 }
+.term-struct .ts-iv { font-size: 18px; font-weight: 700; font-family: var(--font-mono) }
 
 /* Tabs */
-.tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid #21262d}
-.tab-btn{background:none;border:none;color:#8b949e;font-size:14px;padding:10px 20px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:500}
-.tab-btn:hover{color:#c9d1d9}
-.tab-btn.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(63,63,70,0.2);
+}
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--zinc-500);
+  font-size: 13px;
+  padding: 12px 22px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  transition: all var(--transition);
+  letter-spacing: 0.01em;
+}
+.tab-btn:hover { color: var(--zinc-300) }
+.tab-btn.active {
+  color: var(--zinc-200);
+  border-bottom-color: var(--accent);
+}
 
 /* Responsive */
-@media(max-width:768px){
-  .charts-row{grid-template-columns:1fr}
-  .cards{grid-template-columns:repeat(2,1fr)}
-  nav{flex-direction:column;gap:8px}
+@media(max-width:768px) {
+  .charts-row { grid-template-columns: 1fr }
+  .cards { grid-template-columns: repeat(2, 1fr) }
+  .opp-grid { grid-template-columns: 1fr }
+  nav { flex-direction: column; gap: 10px; padding: 12px 20px }
+  .container { padding: 16px }
+  .term-struct { flex-wrap: wrap }
 }
 
 /* Screener tracked badge */
-.badge-tracked{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;background:#0d2818;color:#3fb950;margin-left:4px}
-.badge-new{display:inline-block;padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600;background:#2d1b00;color:#d29922;margin-left:4px}
+.badge-tracked {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--green-dim);
+  color: var(--green);
+  border: 1px solid rgba(34,197,94,0.12);
+  margin-left: 4px;
+  font-family: var(--font-sans);
+}
+.badge-new {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--amber-dim);
+  color: var(--amber);
+  border: 1px solid rgba(245,158,11,0.12);
+  margin-left: 4px;
+  font-family: var(--font-sans);
+}
+
+/* Select inputs */
+select {
+  background: var(--zinc-800);
+  color: var(--zinc-300);
+  border: 1px solid rgba(63,63,70,0.25);
+  border-radius: var(--radius-xs);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  transition: border-color var(--transition);
+  outline: none;
+  cursor: pointer;
+}
+select:hover { border-color: rgba(63,63,70,0.4) }
+select:focus { border-color: var(--accent) }
 </style>
 </head>
 <body>
@@ -161,25 +522,25 @@ tr.clickable:hover{background:#1c2128;cursor:pointer}
   <div id="screener-tab" style="display:none">
     <h2>🔍 全市场 IV Screener — yfinance 数据</h2>
     <div id="screener-meta" class="gr" style="font-size:12px;margin-bottom:12px"></div>
-    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+    <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
       <label class="gr" style="font-size:12px">最低 IV:</label>
-      <select id="scr-min-iv" onchange="renderScreener()" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px">
+      <select id="scr-min-iv" onchange="renderScreener()">
         <option value="0.30">30%</option>
         <option value="0.40" selected>40%</option>
         <option value="0.50">50%</option>
         <option value="0.60">60%</option>
         <option value="0.70">70%</option>
       </select>
-      <label class="gr" style="font-size:12px;margin-left:8px">最高股价:</label>
-      <select id="scr-max-price" onchange="renderScreener()" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px">
+      <label class="gr" style="font-size:12px;margin-left:4px">最高股价:</label>
+      <select id="scr-max-price" onchange="renderScreener()">
         <option value="50">$50</option>
         <option value="100">$100</option>
         <option value="200">$200</option>
         <option value="500" selected>$500</option>
         <option value="99999">不限</option>
       </select>
-      <label class="gr" style="font-size:12px;margin-left:8px">最低 OI:</label>
-      <select id="scr-min-oi" onchange="renderScreener()" style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:4px;padding:4px 8px;font-size:12px">
+      <label class="gr" style="font-size:12px;margin-left:4px">最低 OI:</label>
+      <select id="scr-min-oi" onchange="renderScreener()">
         <option value="0">不限</option>
         <option value="100" selected>100</option>
         <option value="1000">1K</option>
@@ -239,10 +600,10 @@ function signalTag(s) {
 }
 
 function scoreColor(sc) {
-  if (sc >= 70) return '#f85149';
-  if (sc >= 50) return '#d29922';
-  if (sc >= 30) return '#3fb950';
-  return '#484f58';
+  if (sc >= 70) return 'var(--red)';
+  if (sc >= 50) return 'var(--amber)';
+  if (sc >= 30) return 'var(--green)';
+  return 'var(--zinc-600)';
 }
 
 function ratioClass(r) {
@@ -252,6 +613,11 @@ function ratioClass(r) {
   if (r > 1.0) return 'g';
   return 'gr';
 }
+
+// ── Chart.js global defaults ──
+Chart.defaults.color = '#71717a';
+Chart.defaults.borderColor = 'rgba(63,63,70,0.2)';
+Chart.defaults.font.family = "'Geist Sans', sans-serif";
 
 // ── Summary Cards ──
 function renderSummary() {
@@ -286,7 +652,7 @@ function renderScanner() {
 
   $('scanner-body').innerHTML = syms.map(s => `
     <tr class="clickable" onclick="showDetail('${s.tk}')">
-      <td><strong>${s.tk}</strong></td>
+      <td style="font-family:var(--font-sans)"><strong>${s.tk}</strong></td>
       <td>$${fmt(s.px,2)}</td>
       <td class="${s.iv>0.6?'r':s.iv>0.4?'y':''}"><strong>${fmtPct(s.iv)}</strong></td>
       <td>${fmtPct(s.hv20)}</td>
@@ -326,17 +692,17 @@ function renderBarChart() {
     data: {
       labels: syms.map(s => s.tk),
       datasets: [
-        {label:'ATM IV', data:syms.map(s=>s.iv*100), backgroundColor:syms.map(s=>s.iv>0.6?'#f8514980':s.iv>0.4?'#d2992280':'#3fb95080'), borderColor:syms.map(s=>s.iv>0.6?'#f85149':s.iv>0.4?'#d29922':'#3fb950'), borderWidth:1},
-        {label:'HV20', data:syms.map(s=>s.hv20?s.hv20*100:0), backgroundColor:'#58a6ff40', borderColor:'#58a6ff', borderWidth:1},
+        {label:'ATM IV', data:syms.map(s=>s.iv*100), backgroundColor:syms.map(s=>s.iv>0.6?'rgba(239,68,68,0.35)':s.iv>0.4?'rgba(245,158,11,0.35)':'rgba(34,197,94,0.35)'), borderColor:syms.map(s=>s.iv>0.6?'var(--red)':s.iv>0.4?'var(--amber)':'var(--green)'), borderWidth:1, borderRadius:4},
+        {label:'HV20', data:syms.map(s=>s.hv20?s.hv20*100:0), backgroundColor:'rgba(59,130,246,0.25)', borderColor:'var(--accent)', borderWidth:1, borderRadius:4},
       ]
     },
     options: {
       indexAxis:'y',
       responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#8b949e',font:{size:11}}}},
+      plugins:{legend:{labels:{color:'var(--zinc-500)',font:{size:11,family:'Geist Sans'}}}},
       scales:{
-        x:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:v=>v+'%'}},
-        y:{grid:{display:false},ticks:{color:'#c9d1d9',font:{size:12}}}
+        x:{grid:{color:'rgba(63,63,70,0.15)'},ticks:{color:'var(--zinc-500)',font:{family:'Geist Mono'},callback:v=>v+'%'}},
+        y:{grid:{display:false},ticks:{color:'var(--zinc-300)',font:{size:12,family:'Geist Sans'}}}
       }
     }
   });
@@ -377,20 +743,20 @@ function showDetail(tk) {
       data:{
         labels: s.hvc.map(x=>x.d.slice(5)),
         datasets:[
-          {label:'HV20', data:s.hvc.map(x=>x.h20?x.h20*100:null), borderColor:'#58a6ff', borderWidth:1.5, pointRadius:0, tension:0.3},
-          {label:'HV50', data:s.hvc.map(x=>x.h50?x.h50*100:null), borderColor:'#8b949e', borderWidth:1, pointRadius:0, tension:0.3, borderDash:[4,4]},
-          {label:'Current IV', data:s.hvc.map(()=>s.iv*100), borderColor:'#f85149', borderWidth:1, pointRadius:0, borderDash:[8,4]},
+          {label:'HV20', data:s.hvc.map(x=>x.h20?x.h20*100:null), borderColor:'#3b82f6', borderWidth:1.5, pointRadius:0, tension:0.3},
+          {label:'HV50', data:s.hvc.map(x=>x.h50?x.h50*100:null), borderColor:'#71717a', borderWidth:1, pointRadius:0, tension:0.3, borderDash:[4,4]},
+          {label:'Current IV', data:s.hvc.map(()=>s.iv*100), borderColor:'#ef4444', borderWidth:1, pointRadius:0, borderDash:[8,4]},
         ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{title:{display:true,text:'HV 走势 vs 当前 IV',color:'#8b949e',font:{size:12}},legend:{labels:{color:'#8b949e',font:{size:10}}}},
-        scales:{x:{grid:{color:'#21262d'},ticks:{color:'#8b949e',font:{size:9},maxTicksLimit:12}},y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:v=>v+'%'}}}
+        plugins:{title:{display:true,text:'HV 走势 vs 当前 IV',color:'#71717a',font:{size:12}},legend:{labels:{color:'#71717a',font:{size:10}}}},
+        scales:{x:{grid:{color:'rgba(63,63,70,0.15)'},ticks:{color:'#71717a',font:{size:9},maxTicksLimit:12}},y:{grid:{color:'rgba(63,63,70,0.15)'},ticks:{color:'#71717a',callback:v=>v+'%'}}}
       }
     });
   }
 
-  // IV Smile — also check near-term chain if main chain is empty
+  // IV Smile
   if (smileChart) smileChart.destroy();
   let smileData = s.ch;
   if (smileData.length === 0 && D.near) {
@@ -409,18 +775,18 @@ function showDetail(tk) {
       data:{
         labels: allStrikes.map(s=>'$'+s),
         datasets:[
-          {label:'Call IV', data:allStrikes.map(s=>callMap[s]||null), borderColor:'#3fb950', borderWidth:1.5, pointRadius:2, tension:0.3, spanGaps:true},
-          {label:'Put IV', data:allStrikes.map(s=>putMap[s]||null), borderColor:'#f85149', borderWidth:1.5, pointRadius:2, tension:0.3, spanGaps:true},
+          {label:'Call IV', data:allStrikes.map(s=>callMap[s]||null), borderColor:'#22c55e', borderWidth:1.5, pointRadius:2, tension:0.3, spanGaps:true},
+          {label:'Put IV', data:allStrikes.map(s=>putMap[s]||null), borderColor:'#ef4444', borderWidth:1.5, pointRadius:2, tension:0.3, spanGaps:true},
         ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{
-          title:{display:true,text:'IV Smile (按 Strike)',color:'#8b949e',font:{size:12}},
-          legend:{labels:{color:'#8b949e',font:{size:10}}},
-          annotation: s.px ? {annotations:{stockPrice:{type:'line',xMin:'$'+s.px,xMax:'$'+s.px,borderColor:'#d29922',borderWidth:1,borderDash:[4,4]}}} : undefined
+          title:{display:true,text:'IV Smile (按 Strike)',color:'#71717a',font:{size:12}},
+          legend:{labels:{color:'#71717a',font:{size:10}}},
+          annotation: s.px ? {annotations:{stockPrice:{type:'line',xMin:'$'+s.px,xMax:'$'+s.px,borderColor:'#f59e0b',borderWidth:1,borderDash:[4,4]}}} : undefined
         },
-        scales:{x:{grid:{color:'#21262d'},ticks:{color:'#8b949e',font:{size:9},maxTicksLimit:15}},y:{grid:{color:'#21262d'},ticks:{color:'#8b949e',callback:v=>v.toFixed(0)+'%'}}}
+        scales:{x:{grid:{color:'rgba(63,63,70,0.15)'},ticks:{color:'#71717a',font:{size:9},maxTicksLimit:15}},y:{grid:{color:'rgba(63,63,70,0.15)'},ticks:{color:'#71717a',callback:v=>v.toFixed(0)+'%'}}}
       }
     });
   } else {
@@ -435,9 +801,9 @@ function showDetail(tk) {
   }
   $('chain-body').innerHTML = chainData.map(c => {
     const isATM = Math.abs(c.s - s.px) <= s.px * 0.02;
-    const bg = isATM ? 'background:#1c2128' : '';
+    const bg = isATM ? 'background:rgba(63,63,70,0.08)' : '';
     return `<tr style="${bg}">
-      <td class="${c.t==='C'?'g':'r'}">${c.t==='C'?'Call':'Put'}</td>
+      <td style="font-family:var(--font-sans)" class="${c.t==='C'?'g':'r'}">${c.t==='C'?'Call':'Put'}</td>
       <td><strong>$${c.s}</strong>${isATM?' ⬅️':''}</td>
       <td>${c.iv!=null?(c.iv*100).toFixed(1)+'%':'—'}</td>
       <td>${c.d!=null?c.d.toFixed(3):'—'}</td>
@@ -479,7 +845,6 @@ function renderWeekly() {
     return;
   }
 
-  // Group by ticker
   const byTicker = {};
   near.forEach(n => {
     if (!byTicker[n.tk]) byTicker[n.tk] = [];
@@ -490,9 +855,8 @@ function renderWeekly() {
   for (const [tk, expiries] of Object.entries(byTicker)) {
     const px = expiries[0].px;
     html += `<div class="weekly-symbol">`;
-    html += `<h3>${tk} <span class="gr">$${fmt(px,2)}</span></h3>`;
+    html += `<h3>${tk} <span class="gr" style="font-family:var(--font-mono)">$${fmt(px,2)}</span></h3>`;
 
-    // Term structure
     html += `<div class="term-struct">`;
     expiries.sort((a,b) => a.dte - b.dte);
     expiries.forEach(e => {
@@ -506,7 +870,7 @@ function renderWeekly() {
       html += `<h4>📅 ${e.exp} — DTE ${e.dte}</h4>`;
       html += `<div class="opp-grid">`;
 
-      // CSP candidates — highlight best annualized return
+      // CSP candidates
       html += `<div class="opp-box"><h5>🔻 Sell Put (CSP)</h5>`;
       if (e.csp && e.csp.length) {
         const cspAnns = e.csp.map(p => {
@@ -518,7 +882,7 @@ function renderWeekly() {
           const mid = p.m || ((p.b||0)+(p.a||0))/2;
           const ann = e.dte > 0 ? (mid / p.s * 365 / e.dte * 100).toFixed(0) : '—';
           const wk = (mid * 100 / e.dte * 7).toFixed(0);
-          const best = cspAnns[i] === maxCspAnn ? ' style="color:#3fb950;font-weight:700"' : '';
+          const best = cspAnns[i] === maxCspAnn ? ' style="color:#22c55e;font-weight:700"' : '';
           html += `<div class="opp-row">
             <span class="strike">$${p.s}</span>
             <span class="meta">δ${p.d?.toFixed(2)||'—'}</span>
@@ -532,7 +896,7 @@ function renderWeekly() {
       }
       html += `</div>`;
 
-      // CC candidates — highlight best annualized return
+      // CC candidates
       html += `<div class="opp-box"><h5>🔺 Sell Call (CC)</h5>`;
       if (e.cc && e.cc.length) {
         const ccAnns = e.cc.map(c => {
@@ -544,7 +908,7 @@ function renderWeekly() {
           const mid = c.m || ((c.b||0)+(c.a||0))/2;
           const ann = e.dte > 0 && px ? (mid / px * 365 / e.dte * 100).toFixed(0) : '—';
           const wk = (mid * 100 / e.dte * 7).toFixed(0);
-          const best = ccAnns[i] === maxCcAnn ? ' style="color:#3fb950;font-weight:700"' : '';
+          const best = ccAnns[i] === maxCcAnn ? ' style="color:#22c55e;font-weight:700"' : '';
           html += `<div class="opp-row">
             <span class="strike">$${c.s}</span>
             <span class="meta">δ${c.d?.toFixed(2)||'—'}</span>
@@ -583,7 +947,6 @@ function renderScreener() {
   const maxPrice = parseFloat($('scr-max-price').value);
   const minOI = parseInt($('scr-min-oi').value);
 
-  // Tracked tickers from IV Scanner
   const tracked = new Set(D.symbols.map(s => s.tk));
 
   let items = scr.results.filter(r =>
@@ -606,7 +969,7 @@ function renderScreener() {
       ? '<span class="badge-tracked">📊 精确追踪</span>'
       : '<span class="badge-new">🆕 仅 Screener</span>';
     return `<tr>
-      <td><strong>${r.ticker}</strong></td>
+      <td style="font-family:var(--font-sans)"><strong>${r.ticker}</strong></td>
       <td>$${r.price.toFixed(2)}</td>
       <td class="${r.atm_iv>0.7?'r':r.atm_iv>0.5?'y':''}"><strong>${r.atm_iv_pct}%</strong></td>
       <td>${r.open_interest>=1000?(r.open_interest/1000).toFixed(1)+'K':r.open_interest}</td>
